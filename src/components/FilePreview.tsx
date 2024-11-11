@@ -1,66 +1,34 @@
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { FileText, X } from 'lucide-react';
-import Image from 'next/image';
 
 interface FilePreviewProps {
-  isOpen: boolean;
-  onClose: () => void;
-  file: {
-    title: string;
-    imageUrl: string;
-    size: string;
-    uploadedBy?: string;
-    description?: string;
-  };
+  fileId: string;
 }
 
-const DEFAULT_IMAGE = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse2.mm.bing.net%2Fth%3Fid%3DOIP.MNqiZl7u5qQXf8ZHngXwdgHaE8%26pid%3DApi&f=1&ipt=51653442534b74a6b21852af102f8cb0723453af3425edfb09fc6fc0aa7caa63&ipo=images";
-
-export const FilePreview = ({ isOpen, onClose, file }: FilePreviewProps) => {
-  const imageUrl = file.imageUrl || DEFAULT_IMAGE;
-  
+export const FilePreview: React.FC<FilePreviewProps> = ({ fileId }) => {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-800">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-xl font-bold text-gray-100">
-            {file.title}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="mt-4 space-y-6">
-          {/* Image Preview */}
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-gray-700">
-            <Image
-              src={imageUrl}
-              alt={file.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium text-gray-700">File Preview</h4>
+        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.WkHWiqa8PtzvtrPGixIwLAHaEo%26pid%3DApi&f=1&ipt=dc6dea07ae69f614ee2a3f9b9425a1198fcf28c677fa9ecc1617673523f97511&ipo=images")`,
+              backgroundSize: '30px 30px',
+            }} />
           </div>
-
-          {/* File Details */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <div className="space-y-1">
-              <p className="text-sm text-gray-400">Size</p>
-              <p className="text-gray-200">{file.size}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-400">Uploaded by</p>
-              <p className="text-gray-200">{file.uploadedBy || 'Anonymous'}</p>
-            </div>
-            {file.description && (
-              <div className="col-span-2 space-y-1">
-                <p className="text-sm text-gray-400">Description</p>
-                <p className="text-gray-200">{file.description}</p>
-              </div>
-            )}
+          
+          <div className="text-center z-10">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-500">Preview not available</p>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        <p className="text-xs text-gray-500">File ID: {fileId}</p>
+      </div>
+    </div>
   );
 }; 

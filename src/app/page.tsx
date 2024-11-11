@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UploadModal } from '../components/UploadModal';
 import { useWallet } from '../contexts/WalletProvider';
 import { Button } from '@/components/ui/button';
@@ -14,41 +13,43 @@ import {
   Upload,
   Lock,
   Layout,
-  FolderPlus
+  FolderPlus,
+  ArrowLeft,
+  Shield,
+  X
 } from 'lucide-react';
 import { Header } from '../components/Header';
 import { FileCard } from '../components/FileCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedDashboard } from '../components/SharedDashboard';
-import { FileMetadata, Folder } from 'types';
+import { FileMetadata, Folder, MultiSignConfig } from '@/types';
 import { FileItem } from '@/types';
+import { MultiSignConfigModal } from '@/components/MultiSignConfigModal';
+import { MultiSignProvider } from '../contexts/multisig';
 
 const DUMMY_FILES = [
   {
     title: "Project Documentation",
-    imageUrl: "/images/project-doc.jpg",
     size: "2.4 MB",
     uploadedBy: "5CUiis...D8gr",
     description: "Complete project documentation including architecture diagrams and technical specifications."
   },
   {
     title: "Design Assets",
-    imageUrl: "/images/design-assets.jpg",
     size: "5.1 MB",
     uploadedBy: "5CUiis...D8gr",
     description: "UI/UX design assets and brand guidelines for the platform."
   },
   {
     title: "Technical Whitepaper",
-    imageUrl: "/images/whitepaper.jpg",
     size: "1.8 MB",
     uploadedBy: "5CUiis...D8gr",
     description: "Detailed technical whitepaper explaining the system architecture and protocols."
   }
 ];
 
-export default function Home() {
+function HomePage() {
   const { activeAccount, connectWallet } = useWallet();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,11 +65,15 @@ export default function Home() {
       id: uuidv4(),
       folderId: null as string | null,
       name: file.title,
-      starred: false
+      starred: false,
+      imageUrl: '',
     }))
   );
-  const [currentView, setCurrentView] = useState<'myDrive' | 'shared'>('myDrive');
+  const [currentView, setCurrentView] = useState<'myDrive' | 'shared' | 'multiSign'>('myDrive');
   const [refetchFolders, setRefetchFolders] = useState<(() => Promise<void>) | null>(null);
+  const [isMultiSignConfigModalOpen, setIsMultiSignConfigModalOpen] = useState(false);
+  const [multiSignConfigs, setMultiSignConfigs] = useState<MultiSignConfig[]>([]);
+  const [selectedConfig, setSelectedConfig] = useState<MultiSignConfig | null>(null);
 
   const filteredFiles = useMemo(() => {
     return files.filter(file => 
@@ -106,10 +111,10 @@ export default function Home() {
   };
 
   const updatedClasses = {
-    folderIcon: "h-12 w-12 text-emerald-500 transform transition-transform hover:scale-110 duration-200",
-    fileIcon: "h-12 w-12 text-emerald-400 transform transition-transform hover:scale-110 duration-200",
-    fileCard: "flex flex-col items-center space-y-2 rounded-lg border p-4 hover:bg-emerald-50 transition-all duration-200 hover:shadow-lg hover:border-emerald-200",
-    uploadButton: "bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-200 hover:shadow-lg",
+    folderIcon: "h-12 w-12 text-orange-500 transform transition-transform hover:scale-110 duration-200",
+    fileIcon: "h-12 w-12 text-orange-400 transform transition-transform hover:scale-110 duration-200",
+    fileCard: "flex flex-col items-center space-y-2 rounded-lg border p-4 hover:bg-orange-50 transition-all duration-200 hover:shadow-lg hover:border-orange-200",
+    uploadButton: "bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 hover:shadow-lg",
   };
 
   const handleUploadComplete = async (metadata: FileMetadata) => {
@@ -146,7 +151,6 @@ export default function Home() {
         return;
       }
 
-      // Check if folder name already exists
       if (folders.some(f => f.name.toLowerCase() === folderName.trim().toLowerCase())) {
         setError('A folder with this name already exists');
         return;
@@ -166,18 +170,18 @@ export default function Home() {
 
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-800">
+        <DialogContent className="sm:max-w-md bg-white border border-gray-200 shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-100 flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg">
-                <FolderPlus className="h-6 w-6 text-emerald-400" />
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-orange-50 rounded-lg">
+                <FolderPlus className="h-6 w-6 text-orange-500" />
               </div>
               Create New Folder
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Folder Name</label>
+              <label className="text-sm font-medium text-gray-700">Folder Name</label>
               <Input
                 value={folderName}
                 onChange={(e) => {
@@ -185,7 +189,7 @@ export default function Home() {
                   setError('');
                 }}
                 placeholder="Enter folder name"
-                className="bg-gray-800 border-gray-700 text-gray-200 focus:border-emerald-500"
+                className="bg-white border-gray-200 text-gray-900 focus:border-orange-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleCreateFolder();
@@ -193,20 +197,20 @@ export default function Home() {
                 }}
               />
               {error && (
-                <p className="text-sm text-red-400 mt-1">{error}</p>
+                <p className="text-sm text-red-500 mt-1">{error}</p>
               )}
             </div>
             <div className="flex justify-end space-x-4">
               <Button
                 variant="outline"
                 onClick={onClose}
-                className="border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"
+                className="border-gray-200 hover:bg-gray-50 text-gray-700"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateFolder}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="bg-orange-500 hover:bg-orange-600 text-white"
                 disabled={!folderName.trim()}
               >
                 Create Folder
@@ -246,22 +250,35 @@ export default function Home() {
     }));
   };
 
+  const handleSaveConfig = (config: MultiSignConfig) => {
+    if (selectedConfig) {
+      // Update existing config
+      setMultiSignConfigs(prev => 
+        prev.map(c => c.id === config.id ? config : c)
+      );
+    } else {
+      // Add new config
+      setMultiSignConfigs(prev => [...prev, config]);
+    }
+    setSelectedConfig(null);
+  };
+
   return (
-    <div className="flex h-screen flex-col bg-gray-900">
+    <div className="flex h-screen flex-col bg-white">
       <Header onSearch={handleSearch} searchQuery={searchQuery} />
       {activeAccount ? (
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-80 border-r border-gray-800 bg-gray-900">
+          <aside className="w-80 border-r border-gray-200 bg-white">
             <ScrollArea className="h-full">
               <div className="space-y-6 py-8">
                 <div className="px-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold tracking-tight text-gray-200">
+                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">
                     Menu
                   </h2>
                     <Button 
                       variant="ghost" 
-                      className="text-gray-400 hover:text-emerald-400"
+                      className="text-gray-600 hover:text-orange-400"
                       onClick={() => setIsAddFolderModalOpen(true)}
                     >
                       <FolderPlus className="h-5 w-5" />
@@ -271,13 +288,17 @@ export default function Home() {
                   <div className="space-y-4">
                     <Button 
                       variant="secondary" 
-                      className={`w-full justify-start ${currentView === 'myDrive' ? 'bg-gray-800 text-emerald-400' : 'bg-gray-900 text-gray-200'} hover:bg-gray-700 py-8 text-xl`}
+                      className={`w-full justify-start ${
+                        currentView === 'myDrive' 
+                          ? 'bg-orange-50 text-orange-500' 
+                          : 'bg-white text-gray-900'
+                      } hover:bg-orange-100 py-8 text-xl`}
                       onClick={() => {
                         setCurrentView('myDrive');
                         setSelectedFolder(null);
                       }}
                     >
-                      <FolderIcon className="mr-4 h-8 w-8 text-emerald-400" />
+                      <FolderIcon className="mr-4 h-8 w-8 text-orange-400" />
                       My Drive
                     </Button>
 
@@ -289,8 +310,8 @@ export default function Home() {
                           variant="ghost"
                           className={`w-full justify-start py-2 ${
                             selectedFolder === folder.id 
-                              ? 'bg-gray-800 text-emerald-400' 
-                              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                              ? 'bg-orange-50 text-orange-500' 
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-orange-50'
                           }`}
                           onClick={() => setSelectedFolder(folder.id)}
                         >
@@ -305,29 +326,46 @@ export default function Home() {
 
                     <Button 
                       variant="ghost" 
-                      className={`w-full justify-start ${currentView === 'shared' ? 'bg-gray-800 text-emerald-400' : 'text-gray-400'} hover:text-gray-200 hover:bg-gray-800 py-8 text-xl`}
+                      className={`w-full justify-start ${
+                        currentView === 'shared' 
+                          ? 'bg-orange-50 text-orange-500 font-medium' 
+                          : 'text-gray-700 hover:text-orange-500'
+                      } hover:bg-orange-50/80 py-6 text-lg transition-all duration-200`}
                       onClick={() => setCurrentView('shared')}
                     >
-                      <Users className="mr-4 h-8 w-8" />
+                      <Users className="mr-4 h-6 w-6 text-orange-500" />
                       Shared with me
+                    </Button>
+
+                    <Button 
+                      variant="ghost" 
+                      className={`w-full justify-start ${
+                        currentView === 'multiSign' 
+                          ? 'bg-orange-50 text-orange-500 font-medium' 
+                          : 'text-gray-700 hover:text-orange-500'
+                      } hover:bg-orange-50/80 py-6 text-lg transition-all duration-200`}
+                      onClick={() => setCurrentView('multiSign')}
+                    >
+                      <Shield className="mr-4 h-6 w-6 text-orange-500" />
+                      Multi-Sign Configs
                     </Button>
                   </div>
                 </div>
               </div>
             </ScrollArea>
           </aside>
-          <main className="flex-1 overflow-auto bg-gray-900 p-8">
-            {currentView === 'myDrive' ? (
+          <main className="flex-1 overflow-auto bg-white p-8">
+            {currentView === 'myDrive' && (
               <>
                 <div className="mb-8 flex items-center justify-between">
-                  <h2 className="text-3xl font-bold text-gray-100">
+                  <h2 className="text-3xl font-bold text-gray-900">
                     {selectedFolder 
                       ? folders.find(f => f.id === selectedFolder)?.name 
                       : "My Drive"}
                   </h2>
                   <Button 
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-all duration-200 transform hover:scale-105"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition-all duration-200 transform hover:scale-105"
                   >
                     <Upload className="mr-2 h-5 w-5" />
                     Upload
@@ -339,70 +377,192 @@ export default function Home() {
                       key={file.id}
                       id={file.id}
                       title={file.title}
-                      imageUrl={file.imageUrl}
                       size={file.size}
                       uploadedBy={file.uploadedBy}
                       description={file.description}
-                      onDelete={(fileId: string) => {
-                        setDummyFiles(prev => prev.filter(f => f.id !== fileId));
-                      }}
+                      onDelete={handleFileDelete}
                     />
                   ))}
                 </div>
               </>
-            ) : (
+            )}
+            
+            {currentView === 'shared' && (
               <SharedDashboard onBackToMyDrive={() => setCurrentView('myDrive')} />
+            )}
+
+            {currentView === 'multiSign' && (
+              <div className="h-full flex flex-col overflow-hidden">
+                <div className="flex-shrink-0 px-8 pt-8 pb-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-3xl font-bold text-gray-900">Multi-Sign Configurations</h2>
+                    <Button 
+                      onClick={() => {
+                        setSelectedConfig(null);
+                        setIsMultiSignConfigModalOpen(true);
+                      }}
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                    >
+                      <Shield className="mr-2 h-5 w-5" />
+                      New Config
+                    </Button>
+                  </div>
+                </div>
+
+                <ScrollArea className="flex-1 px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {multiSignConfigs.map((config) => (
+                      <div 
+                        key={config.id}
+                        className="bg-white rounded-lg border border-gray-200 hover:border-orange-200 transition-all duration-200 animate-slideUp overflow-hidden"
+                      >
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{config.name}</h3>
+                            <p className="text-sm text-gray-500">
+                              {config.threshold} of {config.addresses.length} signatures required
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedConfig(config);
+                                setIsMultiSignConfigModalOpen(true);
+                              }}
+                              className="text-gray-600 hover:text-orange-500"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this configuration?')) {
+                                  setMultiSignConfigs(prev => prev.filter(c => c.id !== config.id));
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Signers List */}
+                        <div className="max-h-[150px] overflow-y-auto">
+                          {config.addresses.map((address: string, index: number) => (
+                            <div 
+                              key={address}
+                              className="px-4 py-2 flex items-center justify-between hover:bg-gray-50 group"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="h-5 w-5 rounded-full bg-orange-100 flex items-center justify-center text-xs font-medium text-orange-600">
+                                  {index + 1}
+                                </div>
+                                <span className="text-sm text-gray-600 font-medium">
+                                  {address.slice(0, 8)}...{address.slice(-6)}
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this configuration?')) {
+                                    setMultiSignConfigs(prev => prev.filter(c => c.id !== config.id));
+                                  }
+                                }}
+                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Files Section */}
+                        <div className="border-t border-gray-100">
+                          <div className="p-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-3">Recent Files</h4>
+                            <div className="space-y-2">
+                              {[1, 2].map((_, i) => (
+                                <FileCard
+                                  key={i}
+                                  id={`${config.id}-file-${i}`}
+                                  title={i === 0 ? "Project Proposal.pdf" : "Technical Specs.pdf"}
+                                  description={`Requires ${config.threshold} of ${config.addresses.length} signatures`}
+                                  size={i === 0 ? "2.4 MB" : "1.8 MB"}
+                                  uploadedBy={config.addresses[0]}
+                                  onDelete={() => {}}
+                                  status={{
+                                    type: 'multisig',
+                                    signed: i + 1,
+                                    required: config.threshold,
+                                    total: config.addresses.length
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
             )}
           </main>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center bg-gray-900 px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-5xl font-bold text-gray-100 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600">
+        <div className="flex flex-1 flex-col items-center justify-center bg-white px-4 py-20">
+          <div className="max-w-5xl mx-auto text-center space-y-12">
+            <div className="space-y-8">
+              <h1 className="text-6xl font-extrabold bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600 bg-clip-text text-transparent leading-tight pb-4 drop-shadow-sm">
                 Secure, Decentralized File Sharing
               </h1>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                 Unlock the future of privacy with blockchain-based file storage and sharing.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-16">
               {[
                 {
-                  icon: <Wallet className="h-8 w-8 text-emerald-400" />,
+                  icon: <Wallet className="h-8 w-8 text-orange-500 rounded-xl" />,
                   title: "Blockchain Login",
                   description: "Connect your wallet for secure, password-free access"
                 },
                 {
-                  icon: <Lock className="h-8 w-8 text-emerald-400" />,
+                  icon: <Lock className="h-8 w-8 text-orange-500" />,
                   title: "Encrypted Storage",
                   description: "Auto-encryption with decentralized storage"
                 },
                 {
-                  icon: <Users className="h-8 w-8 text-emerald-400" />,
+                  icon: <Users className="h-8 w-8 text-orange-500" />,
                   title: "Access Control",
                   description: "Choose who can view your files"
                 },
                 {
-                  icon: <Layout className="h-8 w-8 text-emerald-400" />,
+                  icon: <Layout className="h-8 w-8 text-orange-500" />,
                   title: "File Dashboard",
                   description: "Track and manage your files easily"
                 }
               ].map((feature, i) => (
                 <div 
                   key={i}
-                  className="group relative p-6 bg-gray-800 rounded-xl border border-gray-700 hover:border-emerald-500/50 transition-all duration-300"
+                  className="group relative p-8 bg-white rounded-xl border border-gray-200 hover:border-orange-200 hover:shadow-lg transition-all duration-300"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-emerald-700/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-orange-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
                   <div className="relative space-y-4">
-                    <div className="p-3 bg-gray-900/50 rounded-lg w-fit">
+                    <div className="p-3 bg-orange-50 rounded-xl w-fit group-hover:bg-orange-100/80 transition-colors duration-300">
                       {feature.icon}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-100">
+                    <h3 className="text-xl font-semibold text-gray-900">
                       {feature.title}
                     </h3>
-                    <p className="text-gray-400">
+                    <p className="text-gray-600">
                       {feature.description}
                     </p>
                   </div>
@@ -410,26 +570,23 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="mt-12 space-y-6">
+            <div className="mt-16 space-y-8">
               <Button
                 onClick={handleConnect}
                 disabled={isConnecting}
-                className="px-8 py-6 text-lg bg-emerald-500 hover:bg-emerald-600 text-white transform hover:scale-105 transition-all duration-200"
+                className="px-8 py-6 text-lg bg-orange-500 hover:bg-orange-600 text-white transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-xl"
               >
-                <Wallet className="mr-2 h-5 w-5" />
+                <Wallet className="mr-2 h-6 w-6" />
                 {isConnecting ? "Connecting..." : "Connect Wallet to Start"}
               </Button>
               
-              <p className="text-sm text-gray-500">
-                Supported wallets: MetaMask, WalletConnect
-              </p>
             </div>
 
-            <div className="mt-16 p-6 bg-gray-800/50 rounded-xl border border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-100 mb-4">
+            <div className="mt-20 p-8 bg-orange-50 rounded-xl border border-orange-100">
+              <h3 className="text-2xl font-semibold text-gray-900 mb-8">
                 Simple Upload Process
               </h3>
-              <div className="flex items-center justify-center space-x-4">
+              <div className="flex items-center justify-center space-x-8">
                 {[
                   { step: "1", text: "Select File" },
                   { step: "2", text: "Specify Viewers" },
@@ -437,13 +594,13 @@ export default function Home() {
                 ].map((step, i, arr) => (
                   <React.Fragment key={i}>
                     <div className="flex flex-col items-center">
-                      <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                      <div className="h-12 w-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-lg">
                         {step.step}
                       </div>
-                      <p className="mt-2 text-sm text-gray-400">{step.text}</p>
+                      <p className="mt-3 text-gray-700 font-medium">{step.text}</p>
                     </div>
                     {i < arr.length - 1 && (
-                      <div className="h-px w-12 bg-gray-700" />
+                      <div className="h-px w-16 bg-orange-200" />
                     )}
                   </React.Fragment>
                 ))}
@@ -459,11 +616,31 @@ export default function Home() {
         walletAddress={activeAccount ?? ''}
         folders={folders}
         onUploadComplete={handleUploadComplete}
+        multiSignConfigs={multiSignConfigs}
       />
       <AddFolderModal 
         isOpen={isAddFolderModalOpen} 
         onClose={() => setIsAddFolderModalOpen(false)} 
       />
+
+      <MultiSignConfigModal
+        isOpen={isMultiSignConfigModalOpen}
+        onClose={() => {
+          setIsMultiSignConfigModalOpen(false);
+          setSelectedConfig(null);
+        }}
+        onSave={handleSaveConfig}
+        initialConfig={selectedConfig}
+      />
     </div>
+  );
+}
+
+// Wrap the HomePage component with providers
+export default function Home() {
+  return (
+    <MultiSignProvider>
+      <HomePage />
+    </MultiSignProvider>
   );
 }

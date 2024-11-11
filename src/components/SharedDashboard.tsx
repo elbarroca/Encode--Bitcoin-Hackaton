@@ -9,11 +9,11 @@ import { Share2, Search, ArrowLeft } from 'lucide-react';
 interface SharedFile {
   id: string;
   title: string;
-  imageUrl: string;
   size: string;
   sharedWith: string;
   sharedAt: string;
   description?: string;
+  uploadedBy: string;
 }
 
 interface SharedDashboardProps {
@@ -23,71 +23,63 @@ interface SharedDashboardProps {
 export const SharedDashboard = ({ onBackToMyDrive }: SharedDashboardProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sharedFiles, setSharedFiles] = useState<SharedFile[]>([
-    // Example shared files
     {
       id: '1',
       title: 'Shared Document 1',
-      imageUrl: 'https://www.cryptoquizz.com/wp-content/uploads/2021/02/polkadot_main-1.jpg',
       size: '2.4 MB',
       sharedWith: '5CUiis...D8gr',
       sharedAt: '2024-02-20',
-      description: 'Shared with external collaborator'
-    },
-    // Add more dummy shared files as needed
+      description: 'Shared with external collaborator',
+      uploadedBy: '5CUiis...D8gr'
+    }
   ]);
 
+  const handleDeleteFile = (id: string) => {
+    setSharedFiles(prev => prev.filter(file => file.id !== id));
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             onClick={onBackToMyDrive}
-            className="text-gray-400 hover:text-emerald-400"
+            className="text-gray-600 hover:text-orange-500 transition-colors"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to My Drive
           </Button>
-          <h2 className="text-3xl font-bold text-gray-100">Shared Files</h2>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Shared Files
+          </h2>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search shared files"
-              className="pl-10 bg-gray-800/50 border-gray-700"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="max-w-xs w-full">
+          <Input
+            placeholder="Search shared files"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-white border-gray-200 text-gray-700 focus:border-orange-500"
+          />
         </div>
       </div>
 
-      {/* Shared Files Grid */}
-      <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {sharedFiles
-          .filter(file => 
-            file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            file.sharedWith.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-          .map((file) => (
-            <div key={file.id} className="relative group">
-              <FileCard
-                id={file.id}
-                title={file.title}
-                imageUrl={file.imageUrl}
-                size={file.size}
-                description={file.description}
-                uploadedBy={file.sharedWith}
-              />
-              <div className="absolute top-2 right-2 z-30">
-                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs">
-                  Shared
-                </span>
-              </div>
-            </div>
-          ))}
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {sharedFiles.map((file) => (
+          <FileCard
+            key={file.id}
+            id={file.id}
+            title={file.title}
+            size={file.size}
+            description={file.description}
+            uploadedBy={file.uploadedBy}
+            onDelete={handleDeleteFile}
+          >
+            <span className="absolute top-3 right-3 px-2 py-1 text-xs font-medium bg-orange-50 text-orange-600 rounded-full">
+              Shared
+            </span>
+          </FileCard>
+        ))}
       </div>
     </div>
   );

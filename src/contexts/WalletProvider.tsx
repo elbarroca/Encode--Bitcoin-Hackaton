@@ -25,29 +25,19 @@ export interface ImportedAccount {
 }
 
 export interface WalletContextInterface {
-  connectWallet: () => Promise<{ address: string; network: string }>;
-  disconnectWallet: () => Promise<void>;
-  getBalance: (address: string) => Promise<string>;
-  switchNetwork: (network: string) => Promise<void>;
-  signMessage: (message: string) => Promise<string>;
-  api: ApiPromise | null;
   activeAccount: string | null;
-  activeNetwork: string | null;
-  accounts: ImportedAccount[];
-  web3Signer: Web3Signer | null; // Change from signer to web3Signer
+  connectWallet: () => Promise<void>;
+  account: {
+    address: string;
+  } | null;
+  signMessage: (message: string) => Promise<string>;
 }
 
 const defaultContext: WalletContextInterface = {
-  connectWallet: async () => ({ address: '', network: '' }),
-  disconnectWallet: async () => {},
-  getBalance: async () => '0',
-  switchNetwork: async () => {},
-  signMessage: async () => '',
-  api: null,
   activeAccount: null,
-  activeNetwork: null,
-  accounts: [],
-  web3Signer: null,
+  connectWallet: async () => {},
+  account: null,
+  signMessage: async () => '',
 };
 
 const WalletContext = createContext<WalletContextInterface>(defaultContext);
@@ -201,16 +191,12 @@ const convertAddress = (address: string, expectedFormat: number) => {
   return (
     <WalletContext.Provider
       value={{
-        connectWallet,
-        disconnectWallet,
-        getBalance,
-        switchNetwork,
-        signMessage,
-        api,
         activeAccount,
-        activeNetwork,
-        accounts,
-        web3Signer, // Provide the Web3Signer instance
+        connectWallet,
+        account: {
+          address: activeAccount || '',
+        },
+        signMessage,
       }}
     >
       {children}
