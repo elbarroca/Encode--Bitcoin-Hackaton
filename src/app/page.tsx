@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { UploadModal } from '../components/UploadModal';
-import { useWallet } from '../contexts/WalletProvider';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -23,10 +22,12 @@ import { FileCard } from '../components/FileCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedDashboard } from '../components/SharedDashboard';
-import { FileMetadata, Folder, MultiSignConfig } from '@/types';
+import { FileMetadata, Folder } from '@/types';
 import { FileItem } from '@/types';
 import { MultiSignConfigModal } from '@/components/MultiSignConfigModal';
 import { MultiSignProvider } from '../contexts/multisig';
+import { useWallet } from '@/contexts/WalletProvider';
+import { MultiSignConfig } from '../../types';
 
 const DUMMY_FILES = [
   {
