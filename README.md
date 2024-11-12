@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RoochDrive
 
-## Getting Started
+RoochDrive is a decentralized, blockchain-based file storage platform built on the **Rooch Network**. Think of it as Google Drive, but on-chain, where files are securely stored, signed, and managed through blockchain technology. RoochDrive offers seamless UX/UI and multi-signature support, making it ideal for organizational or private document management.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Why RoochDrive?
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Secure On-Chain Storage**: Store files on Rooch's L2 network, ensuring data security and integrity.
+- **Multi-Signature Authorization**: Easily manage document access with multi-signature, allowing multiple users to approve files like corporate documents, invoices, and legal files.
+- **User-Friendly Design**: Designed to feel familiar, while leveraging the benefits of blockchain.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🌟 Key Features
 
-## Learn More
+- **Powered by Rooch L2**: Secure, scalable on-chain storage with Rooch’s Layer 2.
+- **Intuitive File Upload & Management**: Simple upload and dashboard interface with real-time status updates for pending, approved, or rejected files.
+- **Configurable Multi-Signature**: Set up required signers for each document in the “Multisign Configs” section, making it ideal for shared document workflows.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📝 Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Connect Wallet**: Use a Rooch-compatible wallet to log in.
+- **Upload & Manage Files**: Upload files and view them on your dashboard.
+- **Set Multi-Signature**: Configure who can sign specific documents.
+- **Approve or Reject**: Signers approve/reject, and the file status updates in real-time.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ⚙️ Next Steps
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Expand Multi-Signature Workflows**: Full support for more complex multi-signature and approval flows.
+- **Enhanced Privacy**: Encrypt sensitive files on upload.
+- **Scale for Enterprises**: Adapt for larger organizations needing robust document workflows.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: NextJS + Lucide-React + Material-UI (MUI)
+- **Blockchain**: Rooch L2 Network
+- **Wallet Integration**: Supports Rooch-compatible wallets for signing and multi-signature transactions
+
+---
+
+## 📥 Getting Started
+
+1. **Clone the Repo**:
+   ```bash
+   git clone https://github.com/elbarroca/Encode--Bitcoin-Hackaton.git
+   cd Encode--Bitcoin-Hackathon
