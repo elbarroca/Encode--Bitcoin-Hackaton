@@ -1,88 +1,206 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { useWallets, useConnectWallet, useCurrentAddress, useWalletStore, WalletAccount } from "@roochnetwork/rooch-sdk-kit";
-import { WalletState } from '../types';
+import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
+import { RoochClient } from '@roochnetwork/rooch-sdk';
+import { 
+    addLocalExtension, 
+    getLocalActiveAccount, 
+    setLocalActiveAccount, 
+    removeLocalActiveAccount, 
+    removeLocalExtension 
+} from '../localStorage';
+import { GetBalanceParams as RoochGetBalanceParams } from '@roochnetwork/rooch-sdk/dist/cjs/client/types/params';
 
-interface WalletContextType {
-  activeAccount: string | null;
-  isConnecting: boolean;
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
-  shortAddress: (address: string, start?: number, end?: number) => string;
+// Rooch specific types
+export interface RoochAddress {
+  bech32: string;
+  hex: string;
+  bitcoinAddress?: string;
 }
 
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
+export interface ImportedAccount {
+  address: RoochAddress;
+  name?: string;
+  source: string;
+}
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const wallets = useWallets();
-  const currentAddress = useCurrentAddress();
-  const { mutateAsync: connect } = useConnectWallet();
-  const connectionStatus = useWalletStore((state: WalletState) => state.connectionStatus);
-  const setWalletDisconnected = useWalletStore((state: WalletState) => state.setWalletDisconnected);
+export interface GetBalanceParams extends RoochGetBalanceParams {
+  address: string;
+  coinType: string;
+  owner: string;
+}
 
-  const shortAddress = useCallback((address: string, start = 6, end = 4): string => {
+export interface WalletContextInterface {
+  connectWallet: () => Promise<{ address: RoochAddress; network: string }>;
+  disconnectWallet: () => Promise<void>;
+  getBalance: (address: string) => Promise<string>;
+  switchNetwork: (network: string) => Promise<void>;
+  signMessage: (message: string) => Promise<string>;
+  roochClient: RoochClient | null;
+  activeAccount: RoochAddress | null;
+  accounts: ImportedAccount[];
+}
+
+const defaultContext: WalletContextInterface = {
+  connectWallet: async () => ({ address: { bech32: '', hex: '' }, network: '' }),
+  disconnectWallet: async () => {},
+  getBalance: async () => '0',
+  switchNetwork: async () => {},
+  signMessage: async () => '',
+  roochClient: null,
+  activeAccount: null,
+  accounts: [],
+};
+
+const WalletContext = createContext<WalletContextInterface>(defaultContext);
+
+export const useWallet = () => useContext(WalletContext);
+
+export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [roochClient, setRoochClient] = useState<RoochClient | null>(null);
+  const [accounts, setAccounts] = useState<ImportedAccount[]>([]);
+  const [activeAccount, setActiveAccount] = useState<RoochAddress | null>(null);
+
+  const accountsRef = useRef(accounts);
+  const activeAccountRef = useRef(activeAccount);
+
+  const initializeClient = async () => {
     try {
-      if (!address) return "";
-      if (address.length <= start + end) return address;
-      return `${address.substring(0, start)}...${address.substring(
-        address.length - end,
-        address.length
-      )}`;
+      // Initialize with proper Network type
+      const client = new RoochClient({
+        url: 'https://dev-seed.rooch.network:443'
+      });
+      
+      setRoochClient(client);
+      return client;
     } catch (error) {
-      return "";
+      console.error('Failed to connect to network:', error);
+      throw error;
     }
-  }, []);
+  };
 
   const connectWallet = useCallback(async () => {
-    if (connectionStatus === 'connected') return;
     try {
-      setIsConnecting(true);
-      if (wallets && wallets.length > 0) {
-        const selectedWallet = wallets[0];
-        const accounts = await selectedWallet.getAccounts();
-        if (accounts && accounts.length > 0) {
-          await connect({ wallet: selectedWallet });
-        } else {
-          throw new Error('No accounts available');
-        }
-      } else {
-        throw new Error('No wallets available');
+      // Check if UniSat wallet is available
+      if (typeof window.unisat === 'undefined') {
+        throw new Error('UniSat wallet not found');
       }
+
+      // Request wallet connection
+      const connected = await window.unisat.requestAccounts();
+      if (!connected || !connected.length) {
+        throw new Error('No accounts found');
+      }
+
+      const bitcoinAddress = connected[0];
+      const network = 'testnet';
+
+      // Format account for Rooch with proper address conversion
+      const formattedAccount: ImportedAccount = {
+        address: {
+          bech32: `rooch1${bitcoinAddress.slice(5)}`,
+          hex: `0x${bitcoinAddress}`,
+          bitcoinAddress: bitcoinAddress
+        },
+        name: 'UniSat Wallet',
+        source: 'unisat'
+      };
+
+      setAccounts([formattedAccount]);
+      accountsRef.current = [formattedAccount];
+      
+      if (formattedAccount.address) {
+        setActiveAccount(formattedAccount.address);
+        activeAccountRef.current = formattedAccount.address;
+        setLocalActiveAccount(network, formattedAccount.address.hex);
+      }
+
+      if (!roochClient) {
+        await initializeClient();
+      }
+
+      return {
+        address: formattedAccount.address,
+        network: network
+      };
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       throw error;
-    } finally {
-      setIsConnecting(false);
     }
-  }, [connect, wallets, connectionStatus]);
+  }, [roochClient]);
 
-  const disconnectWallet = useCallback(() => {
-    if (connectionStatus === 'connected') {
-      setWalletDisconnected();
+  const disconnectWallet = useCallback(async () => {
+    if (roochClient) {
+      // Cleanup Rooch client connection if needed
+      setRoochClient(null);
     }
-  }, [setWalletDisconnected, connectionStatus]);
+        
+    setActiveAccount(null);
+    setAccounts([]);
+  }, [roochClient, activeAccount]);
 
-  const value = {
-    activeAccount: currentAddress?.genRoochAddress().toStr() ?? null,
-    isConnecting,
-    connectWallet,
-    disconnectWallet,
-    shortAddress,
-  };
+  const switchNetwork = useCallback(async (networkKey: string) => {
+    if (roochClient) {
+      setRoochClient(null);
+    }
+    await initializeClient();
+  }, [roochClient]);
+
+  const getBalance = useCallback(async (address: string): Promise<string> => {
+    if (!roochClient) throw new Error('Client not initialized');
+    
+    try {
+      const params: GetBalanceParams = {
+        address,
+        owner: address,
+        coinType: '0x3::gas_coin::RGas'
+      };
+      const balance = await roochClient.getBalance(params);
+      return balance.toString();
+    } catch (error) {
+      console.error('Failed to fetch balance:', error);
+      throw new Error('Failed to fetch balance');
+    }
+  }, [roochClient]);
+
+  const signMessage = useCallback(async (message: string) => {
+    if (!activeAccount) {
+      throw new Error('No active account');
+    }
+
+    try {
+      const signature = await window.unisat.signMessage(message);
+      return signature;
+    } catch (error) {
+      console.error('Failed to sign message:', error);
+      throw error;
+    }
+  }, [activeAccount]);
 
   return (
-    <WalletContext.Provider value={value}>
+    <WalletContext.Provider
+      value={{
+        connectWallet,
+        disconnectWallet,
+        getBalance,
+        switchNetwork,
+        signMessage,
+        roochClient,
+        activeAccount,
+        accounts,
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );
-}
+};
 
-export function useWallet() {
-  const context = useContext(WalletContext);
-  if (context === undefined) {
-    throw new Error('useWallet must be used within a WalletProvider');
+// Add type declaration for UniSat wallet
+declare global {
+  interface Window {
+    unisat: {
+      requestAccounts: () => Promise<string[]>;
+      signMessage: (message: string) => Promise<string>;
+    };
   }
-  return context;
 }
