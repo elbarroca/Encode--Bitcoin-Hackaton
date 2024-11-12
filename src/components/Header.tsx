@@ -1,10 +1,11 @@
 'use client'
 
 import { Button } from '@/components/ui/button';
-import { useWallet } from '../contexts/WalletProvider';
 import { Wallet, ChevronDown } from 'lucide-react';
 import { useCurrentAddress, useWalletStore } from "@roochnetwork/rooch-sdk-kit";
-import { WalletState } from '../types';
+import { useWallet } from '@/contexts/WalletProvider';
+import { WalletState } from '@/types/wallet';
+import { shortAddress } from '@/utils';
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -14,7 +15,7 @@ interface HeaderProps {
 export function Header({ onSearch, searchQuery }: HeaderProps) {
   const currentAddress = useCurrentAddress();
   const connectionStatus = useWalletStore((state: WalletState) => state.connectionStatus);
-  const { connectWallet, disconnectWallet, shortAddress, isConnecting } = useWallet();
+  const { connectWallet, disconnectWallet, activeAccount } = useWallet();
 
   const handleConnect = async () => {
     if (connectionStatus === "connected") {
@@ -33,8 +34,8 @@ export function Header({ onSearch, searchQuery }: HeaderProps) {
     }
   };
 
-  const displayAddress = currentAddress 
-    ? shortAddress(currentAddress.genRoochAddress().toStr(), 8, 6)
+  const displayAddress = activeAccount
+    ? shortAddress(activeAccount.bitcoinAddress, 8, 6)
     : '';
 
   return (
@@ -50,13 +51,12 @@ export function Header({ onSearch, searchQuery }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          {connectionStatus === "connected" ? (
+          {activeAccount ? (
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 onClick={handleConnect}
                 className="text-gray-700 border-gray-200 hover:bg-gray-50"
-                disabled={isConnecting}
               >
                 <div className="flex items-center space-x-2">
                   <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -69,10 +69,9 @@ export function Header({ onSearch, searchQuery }: HeaderProps) {
             <Button
               onClick={handleConnect}
               className="bg-orange-500 hover:bg-orange-600 text-white"
-              disabled={isConnecting}
             >
               <Wallet className="mr-2 h-5 w-5" />
-              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              Connect Wallet
             </Button>
           )}
         </div>
