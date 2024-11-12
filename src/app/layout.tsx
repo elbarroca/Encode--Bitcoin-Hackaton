@@ -1,18 +1,18 @@
-import { WalletProvider } from '../contexts/WalletProvider';
+import { RootProvider } from '../providers/RootProvider'
 import './globals.css'
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
       <body>
-        <WalletProvider>
+        <RootProvider>
           {children}
-        </WalletProvider>
+        </RootProvider>
       </body>
     </html>
-  );
+  )
 }
